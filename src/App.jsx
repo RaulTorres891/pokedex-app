@@ -1,94 +1,106 @@
-import './styles.css'
+/* eslint-disable no-unused-vars */
+
+import React, { useState, useEffect } from "react";
+import PokemonCard from "./components/PokemonCard";
+import Finder from "./components/Finder";
+import PokemonButton from "./components/PokemonButton"; 
+import "./styles.css";
 
 function App() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pokemonData, setPokemonData] = useState(null);
+  const [iniciarBusqueda, setIniciarBusqueda] = useState(false);
+  const [showCard, setShowCard] = useState(false); 
+  const [showButton, setShowButton] = useState(true); 
+
+  useEffect(() => {
+    if (iniciarBusqueda) {
+      if (!searchQuery.trim()) {
+        console.log("Llene el campo de búsqueda.");
+        setPokemonData(null);
+        setIniciarBusqueda(false);
+        return;
+      }
+
+      if (searchQuery === searchQuery.toLowerCase()) {
+        console.log("Escriba correctamente el nombre del Pokémon.");
+        setIniciarBusqueda(false);
+        return;
+      }
+
+      fetch(`https://pokeapi.co/api/v2/pokemon/${searchQuery.toLowerCase()}`)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Pokémon no encontrado");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          const { name, id, sprites, types, weight, height, stats } = data;
+          const formattedStats = stats.reduce((acc, stat) => {
+            acc[stat.stat.name.toUpperCase()] = stat.base_stat;
+            return acc;
+          }, {});
+
+          setPokemonData({
+            name: capitalizeFirstLetter(name),
+            id,
+            imageUrl: sprites.other["official-artwork"].front_default,
+            type: types[0].type.name,
+            weight: `${weight / 10} kg`,
+            height: `${height / 10} m`,
+            description: "No description available",
+            stats: formattedStats,
+          });
+          setIniciarBusqueda(false);
+          setShowButton(true); 
+          setShowCard(false); 
+        })
+        .catch(() => {
+          console.log("Pokémon no encontrado.");
+          setPokemonData(null);
+          setIniciarBusqueda(false);
+        });
+    }
+  }, [iniciarBusqueda, searchQuery]);
+
+  const capitalizeFirstLetter = (string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
 
   return (
-    <>
-      <div className="card">
-        <div className="header">
-          <div className="pokemon-name">Oshawott</div>
-          <div className="pokemon-id">#501</div>
-        </div>
-        <div className="image-container">
-          <div className="circular-progress">
-            <img
-              src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/501.png"
-              alt="Oshawott"
-              width="200"
-            />
-          </div>
-        </div>
-        <div className="poke-info">
-          <div className="types-container">
-            <div className="type water">Water</div>
-          </div>
-          <div className="basics-info">
-            <div className="icon-color">
-              <i className="fas fa-weight" style={{marginRight: '5px'}}></i>
-              5.9 kg
-            </div>
-            <div className="icon-color">
-              <i className="fas fa-ruler-vertical" style={{marginRight: '5px'}}></i>
-              0.5m
-            </div>
-          </div>
-          <p className="description">
-            La vieira de su ombligo no solo sirve como arma, sino también como
-            instrumento para cortar las bayas que estén duras.
-          </p>
-          <div className="base-stats">
-            <h4 className="base-stats-title" >Base Stats</h4>
-            <div className="stat">
-              <span className="stat-info">HP</span>
-              <span className="stat-percentage">45</span>
-              <div className="stat-bar" >
-                <div className="stat-fill" style={{width: '45%'}}></div>
-              </div>
-            </div>
-            <div className="stat">
-              <span className="stat-info">ATK</span>
-              <span className="stat-percentage">49</span>
-              <div className="stat-bar">
-                <div className="stat-fill"  style={{width: '49%'}}></div>
-              </div>
-            </div>
-
-            <div className="stat">
-              <span className="stat-info">DEF</span>
-              <span className="stat-percentage">49</span>
-              <div className="stat-bar">
-                <div className="stat-fill"  style={{width: '49%'}}></div>
-              </div>
-            </div>
-
-            <div className="stat">
-              <span className="stat-info">SATK</span>
-              <span className="stat-percentage">65</span>
-              <div className="stat-bar">
-                <div className="stat-fill"  style={{width: '65%'}}></div>
-              </div>
-            </div>
-
-            <div className="stat">
-              <span className="stat-info">SDEF</span>
-              <span className="stat-percentage">65</span>
-              <div className="stat-bar">
-                <div className="stat-fill"  style={{width: '65%'}}></div>
-              </div>
-            </div>
-
-            <div className="stat">
-              <span className="stat-info">SPD</span>
-              <span className="stat-percentage">45</span>
-              <div className="stat-bar">
-                <div className="stat-fill"  style={{width: '65%'}}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  )
+    <div id="root">
+      <Finder
+        setBusqueda={setSearchQuery}
+        setIniciarBusqueda={setIniciarBusqueda}
+      />
+      
+      {showButton && pokemonData && (
+        <PokemonButton
+          name={pokemonData.name}
+          imageUrl={pokemonData.imageUrl}
+          onClick={() => {
+            setShowCard(true); 
+            setShowButton(false); 
+          }}
+        />
+      )}
+      
+      {showCard && pokemonData && (
+        <PokemonCard
+          key={pokemonData.id}
+          name={pokemonData.name}
+          id={pokemonData.id}
+          imageUrl={pokemonData.imageUrl}
+          type={pokemonData.type}
+          weight={pokemonData.weight}
+          height={pokemonData.height}
+          description={pokemonData.description}
+          stats={pokemonData.stats}
+        />
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;
